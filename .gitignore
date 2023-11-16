@@ -1,6 +1,7 @@
-# misc
-.DS_Store
-.env
-__pycache__
-venv/**
-answr_test.py
+*.env
+../venv/
+.idea/
+__pycache__/
+dist/
+build/
+telegram_ai_bot.egg-info/
