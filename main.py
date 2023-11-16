@@ -1,70 +1,95 @@
-import google.generativeai as palm
-import telebot
+from telegram import ParseMode, ChatAction
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from bardapi import Bard
+import os
+import keep_alive
+# Set the Bard API key
+os.environ["_BARD_API_KEY"] = "dAiFw9V-jARNFOgg_YXrkuTriDFubWKk45MpxNg6IIz51PxiaMWIqrjOUqvWbFDgb2zzAw."
 
-# Your Telegram bot token
-TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
+# Dictionary to store the last messages
+last_messages = {}
 
-# Configure the generative AI API key
-palm.configure(api_key="YOUR_GENERATIVE_AI_API_KEY")
+# Maximum message length allowed by Telegram
+MAX_MESSAGE_LENGTH = 4096
 
-# Create a Telegram bot instance
-bot = telebot.TeleBot(TOKEN)
+# Define a command handler for /start command
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Welcome to the chatbot! Please enter your query.")
 
-# Handle /start, /help, and /hello commands
-@bot.message_handler(commands=['start', 'help', 'hello'])
-def send_welcome(message):
-    name = message.from_user.first_name
-    bot.reply_to(message, f"Hello {name}! Ask me about anything")
-
-# Handle all other messages
-@bot.message_handler(func=lambda message: True)
-def handle_search_product(message):
-    name = message.from_user.first_name
-    msg = message.text
+# Define a message handler for text messages
+def handle_message(update, context):
+    # Show typing indicator while generating the response
+    context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     
-    # Check for empty message
-    if msg == "":
-        bot.reply_to(message, "Sorry, you mustn't write an empty message")
+    # Get the user input
+    user_input = update.message.text
+    
+    # Get the chat ID
+    chat_id = update.effective_chat.id
+    
+    # Get the last message from the dictionary
+    last_message = last_messages.get(chat_id)
+    
+    # Append the last user message and the last Bard response as context
+    context_text = last_message['user'] + '\n' + last_message['bard'] if last_message else ''
+    
+    # Append the current user message to the context
+    context_text += '\n' + user_input
     
     try:
-        bot.reply_to(message, f"Please wait a moment, {name}, before sending another message")
-        
-        # Default parameters for the generative AI model
-        defaults = {
-            'model': 'models/chat-bison-001',
-            'temperature': 0.25,
-            'candidate_count': 1,
-            'top_k': 40,
-            'top_p': 0.95,
-        }
-        
-        context = ""
-        examples = [
-            [
-                " ",
-            ]
-        ]
-        
-        examples[0].append(str(msg))
-        messages = []
-        messages.append("NEXT REQUEST")
-        
-        # Generate response using the generative AI model
-        response = palm.chat(
-            **defaults,
-            context=context,
-            examples=examples,
-            messages=messages
-        )
-        
-        print(response.messages)
-        print(response.last)
-        bot.reply_to(message, response.last)
+        # Call the Bard API to get an answer
+        response = Bard().get_answer(context_text)
     
-    except Exception as e:
-        bot.reply_to(message, str(e))
-        bot.reply_to(message, "Sorry, an error occurred while processing your request.")
+        # Store the current user message and the Bard response in the dictionary
+        last_messages[chat_id] = {
+            'user': user_input,
+            'bard': response['content']
+        }
+    
+        # Split the response into parts if it exceeds the maximum message length
+        response_parts = [response['content'][i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(response['content']), MAX_MESSAGE_LENGTH)]
+    
+        # Send the response parts as separate messages with text markup
+        for part in response_parts:
+            context.bot.send_message(chat_id=chat_id, text=part, parse_mode=ParseMode.HTML)
 
-# Start the bot's polling loop
-if __name__ == "__main__":
-    bot.polling()
+    except Exception as e:
+        # Handle errors gracefully
+        error_message = f"An error occurred: {str(e)}"
+        context.bot.send_message(chat_id=chat_id, text=error_message)
+
+# Define a command handler for /clear command
+def clear(update, context):
+    # Get the chat ID
+    chat_id = update.effective_chat.id
+    
+    # Remove the last message for the user from the dictionary
+    last_messages.pop(chat_id, None)
+    
+    context.bot.send_message(chat_id=chat_id, text="Last messages cleared.")
+keep_alive.keep_alive()
+# Error handler
+def error(update, context):
+    """Log Errors caused by Updates."""
+    context.bot.send_message(chat_id=update.effective_chat.id, text="An error occurred. Please try again later.")
+
+# Set up the Telegram bot
+updater = Updater(token="6941072328:AAFAgxMp0-nDf7TQsm3TV19f5hYG3Uwjk4w", use_context=True)
+dispatcher = updater.dispatcher
+
+# Add handlers for /start command, /clear command, and text messages
+start_handler = CommandHandler('start', start)
+clear_handler = CommandHandler('clear', clear)
+message_handler = MessageHandler(Filters.text & ~Filters.command, handle_message)
+dispatcher.add_handler(start_handler)
+dispatcher.add_handler(clear_handler)
+dispatcher.add_handler(message_handler)
+
+# Add error handler
+dispatcher.add_error_handler(error)
+
+# Start the bot
+updater.start_polling()
+updater.idle()
+
+
