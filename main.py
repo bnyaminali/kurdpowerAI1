@@ -14,7 +14,7 @@ from telegram import Bot, Update  # ChatAction
 
 sys.dont_write_bytecode = True
 try:
-    TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
+    TOKEN = os.environ['6840560666:AAEoKf3NUhL6QMVNykjpk6_a2LSiTy3iTXg']
 except Exception as e:
     print("ERROR: Cannot get token from environment:%s" % e)
     sys.exit(1)
