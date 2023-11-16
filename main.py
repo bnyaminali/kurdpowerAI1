@@ -74,7 +74,7 @@ def error(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="An error occurred. Please try again later.")
 
 # Set up the Telegram bot
-updater = Updater(token="6941072328:AAFAgxMp0-nDf7TQsm3TV19f5hYG3Uwjk4w", use_context=True)
+updater = Updater(token="6840560666:AAEoKf3NUhL6QMVNykjpk6_a2LSiTy3iTXg", use_context=True)
 dispatcher = updater.dispatcher
 
 # Add handlers for /start command, /clear command, and text messages
