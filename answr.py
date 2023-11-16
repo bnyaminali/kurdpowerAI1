@@ -5,9 +5,9 @@ import sys
 from Bard import Chatbot
 
 try:
-    BARD_TOKEN = os.environ['dAiFw9V-jARNFOgg_YXrkuTriDFubWKk45MpxNg6IIz51PxiaMWIqrjOUqvWbFDgb2zzAw']
+    BARD_TOKEN = os.environ['AIzaSyC81I0PK1VNGUJivVVeWJEvZVVo5e33VPA']
     if 'de' in sys.argv:
-        print(f'dAiFw9V-jARNFOgg_YXrkuTriDFubWKk45MpxNg6IIz51PxiaMWIqrjOUqvWbFDgb2zzAw: {BARD_TOKEN}')
+        print(f'AIzaSyC81I0PK1VNGUJivVVeWJEvZVVo5e33VPA: {BARD_TOKEN}')
 except Exception as e:
     print(f"ERROR: Cannot get token from environment:{e}")
     sys.exit(1)
