@@ -1,95 +1,59 @@
-from telegram import ParseMode, ChatAction
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from bardapi import Bard
+#!/usr/bin/env python
+"""
+main file
+"""
+import tbot
+from typing import Any
 import os
-import keep_alive
-# Set the Bard API key
-os.environ["_BARD_API_KEY"] = "dAiFw9V-jARNFOgg_YXrkuTriDFubWKk45MpxNg6IIz51PxiaMWIqrjOUqvWbFDgb2zzAw."
+import logging
+import json
+import sys
+from flask import redirect, url_for
+from flask import Flask, request, Response  # render_template
+from telegram import Bot, Update  # ChatAction
 
-# Dictionary to store the last messages
-last_messages = {}
+sys.dont_write_bytecode = True
+try:
+    TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
+except Exception as e:
+    print("ERROR: Cannot get token from environment:%s" % e)
+    sys.exit(1)
 
-# Maximum message length allowed by Telegram
-MAX_MESSAGE_LENGTH = 4096
+app = Flask(__name__)
+# Enable logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Define a command handler for /start command
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Welcome to the chatbot! Please enter your query.")
-
-# Define a message handler for text messages
-def handle_message(update, context):
-    # Show typing indicator while generating the response
-    context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
-    
-    # Get the user input
-    user_input = update.message.text
-    
-    # Get the chat ID
-    chat_id = update.effective_chat.id
-    
-    # Get the last message from the dictionary
-    last_message = last_messages.get(chat_id)
-    
-    # Append the last user message and the last Bard response as context
-    context_text = last_message['user'] + '\n' + last_message['bard'] if last_message else ''
-    
-    # Append the current user message to the context
-    context_text += '\n' + user_input
-    
-    try:
-        # Call the Bard API to get an answer
-        response = Bard().get_answer(context_text)
-    
-        # Store the current user message and the Bard response in the dictionary
-        last_messages[chat_id] = {
-            'user': user_input,
-            'bard': response['content']
-        }
-    
-        # Split the response into parts if it exceeds the maximum message length
-        response_parts = [response['content'][i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(response['content']), MAX_MESSAGE_LENGTH)]
-    
-        # Send the response parts as separate messages with text markup
-        for part in response_parts:
-            context.bot.send_message(chat_id=chat_id, text=part, parse_mode=ParseMode.HTML)
-
-    except Exception as e:
-        # Handle errors gracefully
-        error_message = f"An error occurred: {str(e)}"
-        context.bot.send_message(chat_id=chat_id, text=error_message)
-
-# Define a command handler for /clear command
-def clear(update, context):
-    # Get the chat ID
-    chat_id = update.effective_chat.id
-    
-    # Remove the last message for the user from the dictionary
-    last_messages.pop(chat_id, None)
-    
-    context.bot.send_message(chat_id=chat_id, text="Last messages cleared.")
-keep_alive.keep_alive()
-# Error handler
-def error(update, context):
-    """Log Errors caused by Updates."""
-    context.bot.send_message(chat_id=update.effective_chat.id, text="An error occurred. Please try again later.")
-
-# Set up the Telegram bot
-updater = Updater(token="6840560666:AAEoKf3NUhL6QMVNykjpk6_a2LSiTy3iTXg", use_context=True)
-dispatcher = updater.dispatcher
-
-# Add handlers for /start command, /clear command, and text messages
-start_handler = CommandHandler('start', start)
-clear_handler = CommandHandler('clear', clear)
-message_handler = MessageHandler(Filters.text & ~Filters.command, handle_message)
-dispatcher.add_handler(start_handler)
-dispatcher.add_handler(clear_handler)
-dispatcher.add_handler(message_handler)
-
-# Add error handler
-dispatcher.add_error_handler(error)
-
-# Start the bot
-updater.start_polling()
-updater.idle()
+bot = Bot(token=TOKEN)
 
 
+@app.route('/', methods=['GET'])
+def tet() -> str:
+    """Redirect to https://t.me/Googl_Bard_bot."""
+    #return redirect(url_for('https://t.me/Googl_Bard_bot'))
+    return "<meta http-equiv='refresh' content='0; url=https://t.me/Googl_Bard_bot'>"
+
+
+@app.route('/', methods=['POST'])
+def index() -> Any:
+    """Handle incoming webhook messages."""
+    # ---
+    msg = request.get_json()
+    # ---
+    print(f'method: {request.method} ')
+    print("message-->" + str(msg))
+    # ---
+    update = Update.de_json(msg, bot)
+    # ---
+    rbot = tbot.MyBot(update, bot, logger)
+    # ---
+    rbot.main()
+    # ---
+    return Response("ok", status=200)
+
+
+if __name__ == "__main__":
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=8080)
