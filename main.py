@@ -1,38 +1,70 @@
-from os import environ
-import asyncio
-from telebot.async_telebot import AsyncTeleBot
-from Bard import Chatbot
+import google.generativeai as palm
+import telebot
 
-# get config
-token = "dAiFw9V-jARNFOgg_YXrkuTriDFubWKk45MpxNg6IIz51PxiaMWIqrjOUqvWbFDgb2zzAw."
+# Your Telegram bot token
+TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
 
-# init telegram bot
-bot_token = "6941072328:AAFAgxMp0-nDf7TQsm3TV19f5hYG3Uwjk4w"
-bot = AsyncTeleBot(bot_token, parse_mode="MARKDOWN")
+# Configure the generative AI API key
+palm.configure(api_key="YOUR_GENERATIVE_AI_API_KEY")
 
-# init chatbot
-chatbot = Chatbot(token)
-print("Initializing bot...")
+# Create a Telegram bot instance
+bot = telebot.TeleBot(TOKEN)
 
-# define a message handler to send a message when the command /start is issued
-@bot.message_handler(commands=["start", "hello"])
-async def send_welcome(message):
-    await bot.reply_to(message, "This bot uses the Google Bard.")
+# Handle /start, /help, and /hello commands
+@bot.message_handler(commands=['start', 'help', 'hello'])
+def send_welcome(message):
+    name = message.from_user.first_name
+    bot.reply_to(message, f"Hello {name}! Ask me about anything")
 
-@bot.message_handler(func=lambda m: True)
-async def send_gpt(message):
-    print("Getting response...")
+# Handle all other messages
+@bot.message_handler(func=lambda message: True)
+def handle_search_product(message):
+    name = message.from_user.first_name
+    msg = message.text
+    
+    # Check for empty message
+    if msg == "":
+        bot.reply_to(message, "Sorry, you mustn't write an empty message")
+    
     try:
-        await bot.send_chat_action(message.chat.id, 'typing')
-        response = chatbot.ask(message.text)
-        await bot.reply_to(message, response["content"])
-    except BaseException as e:
-        await bot.reply_to(message, str(e))
+        bot.reply_to(message, f"Please wait a moment, {name}, before sending another message")
+        
+        # Default parameters for the generative AI model
+        defaults = {
+            'model': 'models/chat-bison-001',
+            'temperature': 0.25,
+            'candidate_count': 1,
+            'top_k': 40,
+            'top_p': 0.95,
+        }
+        
+        context = ""
+        examples = [
+            [
+                " ",
+            ]
+        ]
+        
+        examples[0].append(str(msg))
+        messages = []
+        messages.append("NEXT REQUEST")
+        
+        # Generate response using the generative AI model
+        response = palm.chat(
+            **defaults,
+            context=context,
+            examples=examples,
+            messages=messages
+        )
+        
+        print(response.messages)
+        print(response.last)
+        bot.reply_to(message, response.last)
+    
+    except Exception as e:
+        bot.reply_to(message, str(e))
+        bot.reply_to(message, "Sorry, an error occurred while processing your request.")
 
-async def run_bot():
-    await bot.delete_webhook()  # Disable any existing webhook
-    await bot.polling()  # Start the bot in polling mode
-
-# run the bot
+# Start the bot's polling loop
 if __name__ == "__main__":
-    asyncio.run(run_bot())
+    bot.polling()
