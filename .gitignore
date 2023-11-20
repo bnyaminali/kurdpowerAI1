@@ -1,7 +1,6 @@
-*.env
-../venv/
-.idea/
-__pycache__/
-dist/
-build/
-telegram_ai_bot.egg-info/
+.DS_Store
+TeleTransCreds.json
+__pycache__
+venv/
+test.py
+secrets.json

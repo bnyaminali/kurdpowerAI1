@@ -1,71 +1,58 @@
-## Telegram-AI-bot
+# Telegram Google Translate Bot
 
-Some of the things being assumed here
-1. You have installed python3.7 or above.
-2. You have created a virtual environment (recommended but not mandatory).
-3. You have used pip to install from the requirements.txt file.
+This Python application is deployed at https://gteletransbot.herokuapp.com/. It is a POC not intended for commercial use. All private tokens are expected to be queried from system environment variables. The application queries the Google Translate API by 2 avenues
+* A Flask-based REST API
+* A polling agent that receives messages from a Telegram bot and responds with english translations of those messages to the bot
 
-<br>
+Text sent to be translated by the Google Translate API will be translated from any language other than English, as long as that text is written in the script of that language accurately.
 
-## Getting Bot token
-> **Warning** Do not expose the `BOT_TOKEN`    
+## Flask REST API
+There are REST GET endpoints at 'detect' and 'translate' where you can enter text and get a JSON response back with the language detected only for the 'detect' request and a JSON response with the text translated into English for the 'translate' request.
 
-**Link for generating BOT_TOKEN**: https://medium.com/geekculture/generate-telegram-token-for-bot-api-d26faf9bf064
+Here are some sample requests and their responses:
 
-<br>
+**Translate Request**
 
-## Getting Google Bard API KEY
-> **Warning** Do not expose the `__Secure-1PSID` 
- 
-Since Google Bard is being used as the AI backend, you need to fetch the **BARD_API_KEY** from Bard.
-1. Visit https://bard.google.com/
-2. F12 for console
-3. Session: Application → Cookies → Copy the value of  `__Secure-1PSID` cookie.
+      https://gteletransbot.herokuapp.com/translate?text=apfel
 
-Note that while I referred to `__Secure-1PSID` value as an API KEY for convenience, it is not an officially provided API KEY. 
-Cookie value subject to frequent changes. Verify the value again if an error occurs. Most errors occur when an invalid cookie value is entered.
 
-<br>
+    {
+      "detectedSourceLanguage": "de",
+      "input": "apfel",
+      "translatedText": "Apple"
+    }
 
-## Create .env file
-Creating .env file inside **telegram_ai_bot/** directory from which the **BOT_TOKEN** and **BARD_API_KEY** will be fetched.
-```env
-BOT_TOKEN=xxxxxxxxxx
-BARD_API_KEY=xxxxxxxxxx
-```
+**Detect Language Request**
 
-<br>
+      https://gteletransbot.herokuapp.com/detect?text=apfel
 
-## Usage 
-From the base directory run:
-```bash
-python3 -m telegram_ai_bot.src.ai_telegram_bot_async
-```
 
-<br>
+      {
+        "confidence": 0.98828125,
+        "input": "apfel",
+        "language": "de"
+      }
 
-## Third-Party Package: Bard-API
+## Telegram API
+The Telegram API makes use of a private token specifically provided for our bot that will be used.
 
-Bard-API is a powerful Python library that provides functionality for using Bard's webserver for getting your answers.
+This bot can be used in the Telegram app at:
 
-The Bard-API library is released under the MIT License. Please refer to the Bard-API's license file for detailed terms and conditions.
+`@googTransBot`
 
-For more information about Bard-API, please visit the [Bard-API GitHub repository](https://github.com/dsdanielpark/Bard-API).
+The API will run at the same time the Flask server is started. When the API is run, it will poll for any messages sent by users of the Telegram bot. When a user sends a message to the bot, the Telegram API will make a request to the Google Translate API, clean the the HTML response returned, and if the detected language of the response is not in English, it will send a message to the user with the translated text.
 
-<br>
 
-## Shifting Service Policies: Bard and Google's Dynamics 
-Bard's service status and Google's API interfaces are in constant flux. *The number of replies is currently limited, but certain users,* such as those utilizing VPNs or proxy servers, have reported slightly higher message caps. Adaptability is crucial in navigating these dynamic service policies. Please note that the cookie values used in this package are not official API values.
+## Environment Variables Stored
 
-<br>
+client_secret="{contents_of_google_cloud_private_token_file}"
 
-### Important Notice
-  The user assumes all legal responsibilities associated with using the BardAPI package and Telegram-AI-bot project. This Python project merely facilitates easy access to Google Bard Telegram Bot for developers. Users are solely responsible for managing data and using the package appropriately. For further information, please consult the Google Bard Official Documentation.
-    
-### Caution
-This Python project is not an official Google package or API service. It is not affiliated with Google and uses Google account cookies, which means that excessive or commercial usage may result in restrictions on your Google account. The project was created to support developers in testing functionalities due to delays in the official Google package. However, it should not be misused or abused. Please be cautious and refer to the Readme for more information.
-  
+GOOGLE_APPLICATION_CREDENTIALS="{path_to_google_cloud_private_token}"
 
-## License
+TELEGRAM_TOKEN="{telegram_bot_private_token}"
 
-This project is licensed under the GNU General Public License (GPL) version 3.0. By using, contributing, or redistributing this project, you agree to abide by the terms and conditions of the GPL. You can find a copy of the license in the [LICENSE](LICENSE) file.
+
+## Resources Used
+Google Translate API: https://cloud.google.com/translate/docs/basic/setup-basic
+
+Telegram API: https://github.com/python-telegram-bot/python-telegram-bot

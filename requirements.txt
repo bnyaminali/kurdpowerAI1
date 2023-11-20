@@ -1,7 +1,5 @@
-httpx[http2]
-python-telegram-bot[all]
-git+https://github.com/dsdanielpark/Bard-API.git
-openai
-requests
-pyTelegramBotAPI
-python-dotenv
+setuptools==65.5.1
+Flask==2.3.2
+google-cloud-translate==2.0.1
+gunicorn==20.0.4
+python-telegram-bot==12.7
